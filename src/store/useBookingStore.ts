@@ -38,12 +38,12 @@ export interface BookingState {
 
 const DEFAULT_USER: StudentUser = {
   id: 'user_vku_01',
-  studentCode: '22IT108',
-  name: 'Nguyễn Văn An',
-  major: 'Kỹ thuật Phần mềm (Software Engineering)',
-  className: '22SE1',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-  email: 'annv.22it@vku.udn.vn',
+  studentCode: '23IT.EB031',
+  name: 'Trần Lê Nguyên Hải',
+  major: 'Công nghệ thông tin',
+  className: '23ITe1',
+  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80',
+  email: 'haitln.23ite@vku.udn.vn',
   notificationEnabled: true,
 };
 
@@ -206,6 +206,15 @@ export const useBookingStore = create<BookingState>()(
       storage: createJSONStorage(() => AsyncStorage),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true);
+        if (state && state.user.studentCode !== '23IT.EB031') {
+          state.setUser({
+            name: 'Trần Lê Nguyên Hải',
+            studentCode: '23IT.EB031',
+            className: '23ITe1',
+            major: 'Công nghệ thông tin',
+            email: 'haitln.23ite@vku.udn.vn',
+          });
+        }
       },
     }
   )

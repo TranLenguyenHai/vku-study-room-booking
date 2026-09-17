@@ -1,6 +1,6 @@
 export interface StudentUser {
   id: string;
-  studentCode: string; // e.g. '22IT108'
+  studentCode: string; // e.g. '23IT.EB031'
   name: string;
   major: string;
   className: string;

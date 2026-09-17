@@ -148,5 +148,5 @@ Toàn bộ file build tĩnh nằm trong thư mục `dist/`, có thể deploy tr�
 
 ## 👥 Nhóm Tác Giả & Bản Quyền
 - Dự án bài tập lớn **Mini-Project 2: Real-time Study Room Booking App**.
-- Sinh viên thực hiện: **Nguyễn Văn An** (MSSV: `22IT108` - Lớp `22SE1`).
+- Sinh viên thực hiện: **Trần Lê Nguyên Hải** (MSSV: `23IT.EB031` - Lớp `23ITe1` - Ngành `Công nghệ thông tin`).
 - Đơn vị đào tạo: **Trường Đại học Công nghệ Thông tin và Truyền thông Việt - Hàn (VKU)**.
