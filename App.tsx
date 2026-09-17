@@ -1,20 +1,24 @@
+import React, { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { AppNavigator } from './src/navigation/AppNavigator';
+import { requestNotificationPermission } from './src/services/notificationService';
+import { useBookingStore } from './src/store/useBookingStore';
 
 export default function App() {
+  const user = useBookingStore((state) => state.user);
+
+  useEffect(() => {
+    // Gracefully ask for notification permissions on app start if enabled
+    if (user.notificationEnabled) {
+      requestNotificationPermission();
+    }
+  }, [user.notificationEnabled]);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      <StatusBar style="light" />
+      <AppNavigator />
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
