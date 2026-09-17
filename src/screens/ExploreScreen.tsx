@@ -4,10 +4,10 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +23,7 @@ import { COLORS, SPACING } from '../constants/theme';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export const ExploreScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const rooms = useBookingStore((state) => state.rooms);
 
@@ -95,12 +96,12 @@ export const ExploreScreen: React.FC = () => {
   const keyExtractor = useCallback((item: Room) => item.id, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primaryDark} />
 
-      {/* Top App Header */}
-      <View style={styles.topHeader}>
-        <View>
+      {/* Top App Header with Dynamic Island safe padding */}
+      <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 24) + 10 }]}>
+        <View style={styles.headerTitleWrap}>
           <Text style={styles.univSubTitle}>TRƯỜNG ĐẠI HỌC CNTT & TT VIỆT - HÀN</Text>
           <Text style={styles.appTitle}>VKU Study Room Booking</Text>
         </View>
@@ -141,22 +142,26 @@ export const ExploreScreen: React.FC = () => {
         windowSize={5}
         removeClippedSubviews={true}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
   topHeader: {
     backgroundColor: COLORS.primaryDark,
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+    paddingBottom: SPACING.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerTitleWrap: {
+    flex: 1,
+    paddingRight: 10,
   },
   univSubTitle: {
     fontSize: 10,

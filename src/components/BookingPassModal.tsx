@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { Booking } from '../types/booking';
@@ -27,6 +28,7 @@ export const BookingPassModal: React.FC<BookingPassModalProps> = ({
   booking,
   onClose,
 }) => {
+  const insets = useSafeAreaInsets();
   const [isCheckedInDemo, setIsCheckedInDemo] = useState(false);
   const checkInBooking = useBookingStore((state) => state.checkInBooking);
 
@@ -62,7 +64,7 @@ export const BookingPassModal: React.FC<BookingPassModalProps> = ({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { paddingTop: Math.max(insets.top, 24) + 12 }]}>
         <View style={styles.modalContainer}>
           {/* Header */}
           <View style={styles.modalHeader}>

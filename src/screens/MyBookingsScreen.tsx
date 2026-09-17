@@ -5,11 +5,11 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Alert,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Booking } from '../types/booking';
 import { useBookingStore } from '../store/useBookingStore';
@@ -19,6 +19,7 @@ import { sendImmediateTestNotification } from '../services/notificationService';
 import { COLORS, RADIUS, SPACING } from '../constants/theme';
 
 export const MyBookingsScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY'>('ACTIVE');
   const [selectedPass, setSelectedPass] = useState<Booking | null>(null);
 
@@ -140,11 +141,11 @@ export const MyBookingsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primaryDark} />
 
-      {/* Header */}
-      <View style={styles.header}>
+      {/* Header with Dynamic Island safe padding */}
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 24) + 10 }]}>
         <Text style={styles.headerSub}>VKU STUDY ROOM BOOKING</Text>
         <Text style={styles.headerTitle}>Lịch Đặt Phòng Của Tôi</Text>
       </View>
@@ -198,7 +199,7 @@ export const MyBookingsScreen: React.FC = () => {
         booking={selectedPass}
         onClose={() => setSelectedPass(null)}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 

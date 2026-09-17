@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -27,6 +28,7 @@ type RouteProps = RouteProp<RootStackParamList, 'RoomDetail'>;
 type NavProps = NativeStackNavigationProp<RootStackParamList>;
 
 export const RoomDetailScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavProps>();
   const { room } = route.params;
@@ -84,8 +86,8 @@ export const RoomDetailScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Navigation Top Bar */}
-      <View style={styles.navBar}>
+      {/* Navigation Top Bar with Dynamic Island safe padding */}
+      <View style={[styles.navBar, { paddingTop: Math.max(insets.top, 24) + 6 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>

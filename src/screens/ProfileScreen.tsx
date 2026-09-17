@@ -9,15 +9,16 @@ import {
   Switch,
   Alert,
   Platform,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useBookingStore } from '../store/useBookingStore';
 import { requestNotificationPermission } from '../services/notificationService';
 import { COLORS, RADIUS, SPACING } from '../constants/theme';
 
 export const ProfileScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { user, reservations, toggleNotificationSetting, resetToDefaults } = useBookingStore();
 
   const activeCount = reservations.filter((b) => b.status === 'CONFIRMED').length;
@@ -50,11 +51,11 @@ export const ProfileScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primaryDark} />
 
-      {/* Header */}
-      <View style={styles.header}>
+      {/* Header with Dynamic Island safe padding */}
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 24) + 10 }]}>
         <Text style={styles.headerSub}>TÀI KHOẢN SINH VIÊN VKU</Text>
         <Text style={styles.headerTitle}>Hồ Sơ & Cài Đặt</Text>
       </View>
@@ -136,7 +137,7 @@ export const ProfileScreen: React.FC = () => {
           <Text style={styles.projectAuthor}>Khoa Khoa Học Máy Tính & Kỹ Thuật Phần Mềm - VKU</Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
