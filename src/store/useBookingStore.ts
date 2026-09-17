@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Room } from '../types/room';
 import { Booking, SlotId } from '../types/booking';
 import { StudentUser } from '../types/user';
-import { MOCK_ROOMS, INITIAL_MOCK_BOOKINGS, TIME_SLOTS } from '../data/mockRooms';
+import { MOCK_ROOMS, INITIAL_MOCK_BOOKINGS, TIME_SLOTS, isSlotInPast } from '../data/mockRooms';
 import { scheduleBookingReminder, cancelNotification } from '../services/notificationService';
 
 export interface BookingState {
@@ -106,7 +106,19 @@ export const useBookingStore = create<BookingState>()(
         }
 
         const slot = TIME_SLOTS.find((s) => s.id === slotId);
-        const slotLabel = slot ? slot.label : slotId;
+        if (!slot) {
+          return { success: false, message: 'Phòng hoặc khung giờ không tồn tại!' };
+        }
+
+        // 0. Past slot check
+        if (isSlotInPast(date, slot.startTime)) {
+          return {
+            success: false,
+            message: 'Khung giờ này đã qua thời gian bắt đầu, không thể đặt!',
+          };
+        }
+
+        const slotLabel = slot.label;
 
         // 2. Generate unique booking pass code
         const randomCode = Math.floor(10000 + Math.random() * 90000);

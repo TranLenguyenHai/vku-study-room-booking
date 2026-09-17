@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types/navigation';
 import { SlotId, Booking } from '../types/booking';
-import { getFormattedDate } from '../data/mockRooms';
+import { getFormattedDate, TIME_SLOTS, isSlotInPast } from '../data/mockRooms';
 import { useBookingStore } from '../store/useBookingStore';
 import { TimeSlotSelector } from '../components/TimeSlotSelector';
 import { StatusBadge } from '../components/StatusBadge';
@@ -37,6 +37,16 @@ export const RoomDetailScreen: React.FC = () => {
   const [selectedSlotId, setSelectedSlotId] = useState<SlotId | null>(null);
   const [purpose, setPurpose] = useState<string>('Học nhóm môn React Native & Đồ án tốt nghiệp');
   const [loading, setLoading] = useState(false);
+
+  const handleSelectDate = (date: string) => {
+    setSelectedDate(date);
+    if (selectedSlotId) {
+      const slot = TIME_SLOTS.find((s) => s.id === selectedSlotId);
+      if (slot && isSlotInPast(date, slot.startTime)) {
+        setSelectedSlotId(null);
+      }
+    }
+  };
 
   // Modal Pass after successful booking
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
@@ -132,7 +142,7 @@ export const RoomDetailScreen: React.FC = () => {
         <TimeSlotSelector
           roomId={room.id}
           selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
+          onSelectDate={handleSelectDate}
           selectedSlotId={selectedSlotId}
           onSelectSlot={setSelectedSlotId}
         />

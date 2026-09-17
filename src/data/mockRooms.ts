@@ -154,6 +154,40 @@ export function getFormattedDate(offsetDays: number = 0): string {
   return date.toISOString().split('T')[0];
 }
 
+/**
+ * Check if a time slot has already passed based on current device local time
+ * @param dateString 'YYYY-MM-DD'
+ * @param startTime '07:30', '09:30', etc.
+ */
+export function isSlotInPast(dateString: string, startTime: string): boolean {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const todayString = `${year}-${month}-${day}`;
+
+  if (dateString < todayString) {
+    return true;
+  }
+  if (dateString > todayString) {
+    return false;
+  }
+
+  // It is today: check if current time is at or past the slot startTime
+  const [slotHours, slotMinutes] = startTime.split(':').map(Number);
+  const currentHours = now.getHours();
+  const currentMinutes = now.getMinutes();
+
+  if (currentHours > slotHours) {
+    return true;
+  }
+  if (currentHours === slotHours && currentMinutes >= slotMinutes) {
+    return true;
+  }
+
+  return false;
+}
+
 // Initial mock reservations to test Conflict Engine immediately!
 export const INITIAL_MOCK_BOOKINGS: Booking[] = [
   {

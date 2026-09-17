@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { TIME_SLOTS } from '../data/mockRooms';
+import { TIME_SLOTS, isSlotInPast } from '../data/mockRooms';
 import { SlotId, TimeSlot } from '../types/booking';
 import { COLORS, RADIUS, SPACING } from '../constants/theme';
 import { useBookingStore } from '../store/useBookingStore';
@@ -109,66 +109,84 @@ export const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = React.memo(
           </View>
         </View>
 
-        {/* Discrete Slots Grid */}
+        {/* Discrete Slots Grid (Lọc ẩn các khung giờ đã qua theo thời gian thực) */}
         <View style={styles.slotGrid}>
-          {TIME_SLOTS.map((slot: TimeSlot) => {
-            const isBooked = isSlotBooked(roomId, selectedDate, slot.id);
-            const isSelected = selectedSlotId === slot.id;
-            const existingBooking = isBooked ? getSlotBooking(roomId, selectedDate, slot.id) : undefined;
+          {(() => {
+            const visibleSlots = TIME_SLOTS.filter(
+              (slot) => !isSlotInPast(selectedDate, slot.startTime)
+            );
 
-            return (
-              <TouchableOpacity
-                key={slot.id}
-                disabled={isBooked}
-                style={[
-                  styles.slotCard,
-                  isBooked && styles.slotCardBooked,
-                  isSelected && !isBooked && styles.slotCardActive,
-                ]}
-                onPress={() => onSelectSlot(slot.id)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.slotHeader}>
+            if (visibleSlots.length === 0) {
+              return (
+                <View style={styles.emptySlotsBox}>
+                  <Ionicons name="time-outline" size={30} color={COLORS.textMuted} />
+                  <Text style={styles.emptySlotsTitle}>Đã hết ca học khả dụng trong ngày hôm nay</Text>
+                  <Text style={styles.emptySlotsDesc}>
+                    Các ca học hôm nay đều đã qua thời gian bắt đầu. Bạn vui lòng bấm chọn ngày mai hoặc các ngày tiếp theo để đặt trước phòng nhé!
+                  </Text>
+                </View>
+              );
+            }
+
+            return visibleSlots.map((slot: TimeSlot) => {
+              const isBooked = isSlotBooked(roomId, selectedDate, slot.id);
+              const isSelected = selectedSlotId === slot.id;
+              const existingBooking = isBooked ? getSlotBooking(roomId, selectedDate, slot.id) : undefined;
+
+              return (
+                <TouchableOpacity
+                  key={slot.id}
+                  disabled={isBooked}
+                  style={[
+                    styles.slotCard,
+                    isBooked && styles.slotCardBooked,
+                    isSelected && !isBooked && styles.slotCardActive,
+                  ]}
+                  onPress={() => onSelectSlot(slot.id)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.slotHeader}>
+                    <Text
+                      style={[
+                        styles.periodText,
+                        isBooked && styles.periodTextBooked,
+                        isSelected && !isBooked && styles.periodTextActive,
+                      ]}
+                    >
+                      {slot.period}
+                    </Text>
+                    {isBooked ? (
+                      <View style={styles.lockBadge}>
+                        <Ionicons name="lock-closed" size={11} color="#6B7280" />
+                        <Text style={styles.lockText}>Đã kín</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.availBadge}>
+                        <Ionicons name="checkmark-circle" size={12} color={COLORS.available} />
+                        <Text style={styles.availText}>Còn trống</Text>
+                      </View>
+                    )}
+                  </View>
+
                   <Text
                     style={[
-                      styles.periodText,
-                      isBooked && styles.periodTextBooked,
-                      isSelected && !isBooked && styles.periodTextActive,
+                      styles.timeText,
+                      isBooked && styles.timeTextBooked,
+                      isSelected && !isBooked && styles.timeTextActive,
                     ]}
                   >
-                    {slot.period}
+                    {slot.label}
                   </Text>
-                  {isBooked ? (
-                    <View style={styles.lockBadge}>
-                      <Ionicons name="lock-closed" size={11} color="#6B7280" />
-                      <Text style={styles.lockText}>Đã kín</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.availBadge}>
-                      <Ionicons name="checkmark-circle" size={12} color={COLORS.available} />
-                      <Text style={styles.availText}>Còn trống</Text>
-                    </View>
+
+                  {isBooked && existingBooking && (
+                    <Text style={styles.bookedByText} numberOfLines={1}>
+                      Đặt bởi: {existingBooking.studentCode} ({existingBooking.userName})
+                    </Text>
                   )}
-                </View>
-
-                <Text
-                  style={[
-                    styles.timeText,
-                    isBooked && styles.timeTextBooked,
-                    isSelected && !isBooked && styles.timeTextActive,
-                  ]}
-                >
-                  {slot.label}
-                </Text>
-
-                {isBooked && existingBooking && (
-                  <Text style={styles.bookedByText} numberOfLines={1}>
-                    Đặt bởi: {existingBooking.studentCode} ({existingBooking.userName})
-                  </Text>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+                </TouchableOpacity>
+              );
+            });
+          })()}
         </View>
 
         {/* Visual Conflict Notice if slot selected is conflict */}
@@ -382,5 +400,26 @@ const styles = StyleSheet.create({
     color: '#166534',
     flex: 1,
     lineHeight: 16,
+  },
+  emptySlotsBox: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptySlotsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+  },
+  emptySlotsDesc: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });
