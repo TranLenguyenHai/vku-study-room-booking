@@ -37,12 +37,19 @@ Dự án thuộc **Mini-Project 2** (Trọng số 10% - Tuần 5 & 6).
   - Hiển thị vé điện tử kèm mã QR động (`react-native-qrcode-svg`).
   - Hỗ trợ nút **"Mô phỏng Quét Check-in"** chuyển trạng thái sang `CHECKED_IN` ngay trên giao diện.
 
-### 3. 📦 Global State Management với Zustand & AsyncStorage
-- Quản lý trạng thái toàn cục tập trung với `useBookingStore`:
-  - **User Session**: Quản lý thông tin sinh viên VKU (Mã SV, Họ tên, Lớp, Ngành, Email, Avatar).
-  - **Reservations**: Quản lý danh sách đặt phòng đang hoạt động và lịch sử.
-  - **Cancellation Actions**: Hủy lịch phòng tức thì, giải phóng ngay khung giờ đó trong Conflict Engine mà không cần reload app.
-  - **Data Persistence**: Tích hợp middleware `persist` kết hợp `@react-native-async-storage/async-storage` giúp lưu dữ liệu bền vững qua các lần khởi động lại app.
+### 3. 🗄️ Kiến Trúc Database Kép (Local SQLite & Supabase Cloud PostgreSQL)
+- **Local Relational SQLite Database (`expo-sqlite`)**:
+  - File database quan hệ `vku_booking.db` lưu trữ trực tiếp trên thiết bị di động (iPhone / Android).
+  - Tự động khởi tạo schema SQL với bảng `rooms`, `bookings` và chỉ mục `idx_bookings_conflict` tăng tốc truy vấn.
+  - Nạp sẵn (seed) dữ liệu 8 phòng học thực tế của các khu A, B, C, V trường VKU.
+  - Thực thi các câu lệnh SQL chuẩn: `SELECT`, `INSERT OR REPLACE`, `UPDATE` khi sinh viên đặt hoặc hủy phòng.
+  - Hoạt động 100% offline bền vững, không yêu cầu tài khoản đám mây ngoài.
+- **Supabase Cloud Database & Realtime WebSocket (`@supabase/supabase-js`)**:
+  - Tích hợp sẵn cơ sở dữ liệu đám mây Supabase PostgreSQL kèm file [`supabase-schema.sql`](./supabase-schema.sql).
+  - Khi cấu hình `.env`, hệ thống tự động kích hoạt kênh Realtime WebSocket: khi sinh viên A giữ chỗ, điện thoại của sinh viên B lập tức khóa slot mà không cần reload!
+- **State Management kết hợp (`useBookingStore`)**:
+  - Kết hợp Zustand + AsyncStorage + SQLite + Supabase tạo thành kiến trúc lưu trữ 4 lớp (In-memory reactive -> Local Persistent -> SQLite Relational DB -> Cloud Realtime DB).
+  - Hủy lịch phòng tức thì, giải phóng ngay khung giờ trong Conflict Engine và đồng bộ xuống SQLite + Cloud.
 
 ### 4. 🔔 Local Notifications (`expo-notifications`)
 - Tích hợp thư viện thông báo cục bộ `expo-notifications`:

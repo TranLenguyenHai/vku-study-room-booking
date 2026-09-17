@@ -6,6 +6,21 @@ import { Booking, SlotId } from '../types/booking';
 import { StudentUser } from '../types/user';
 import { MOCK_ROOMS, INITIAL_MOCK_BOOKINGS, TIME_SLOTS, isSlotInPast } from '../data/mockRooms';
 import { scheduleBookingReminder, cancelNotification } from '../services/notificationService';
+import {
+  initSQLiteDatabase,
+  fetchRoomsFromSQLite,
+  fetchBookingsFromSQLite,
+  insertBookingToSQLite,
+  updateBookingStatusInSQLite,
+} from '../services/sqliteDatabase';
+import {
+  isSupabaseConfigured,
+  supabase,
+  fetchRemoteRooms,
+  fetchRemoteBookings,
+  insertRemoteBooking,
+  updateRemoteBookingStatus,
+} from '../services/supabase';
 
 export interface BookingState {
   // User Session
@@ -14,13 +29,17 @@ export interface BookingState {
   rooms: Room[];
   // Reservations
   reservations: Booking[];
-  // Hydration state
+  // Hydration & Sync states
   isHydrated: boolean;
+  isDatabaseReady: boolean;
+  isCloudConnected: boolean;
 
   // Actions
   setHydrated: (state: boolean) => void;
   setUser: (user: Partial<StudentUser>) => void;
   toggleNotificationSetting: (enabled: boolean) => void;
+  initDatabaseSync: () => Promise<void>;
+  initSupabaseSync: () => Promise<void>;
 
   // Conflict Engine & Reservation Actions
   isSlotBooked: (roomId: string, date: string, slotId: SlotId) => boolean;
@@ -54,6 +73,8 @@ export const useBookingStore = create<BookingState>()(
       rooms: MOCK_ROOMS,
       reservations: INITIAL_MOCK_BOOKINGS,
       isHydrated: false,
+      isDatabaseReady: false,
+      isCloudConnected: isSupabaseConfigured,
 
       setHydrated: (state: boolean) => set({ isHydrated: state }),
 
@@ -66,6 +87,122 @@ export const useBookingStore = create<BookingState>()(
         set((state) => ({
           user: { ...state.user, notificationEnabled: enabled },
         })),
+
+      /**
+       * Initialize Relational SQLite Database (vku_booking.db)
+       * and subsequently connect to Supabase Cloud if configured
+       */
+      initDatabaseSync: async () => {
+        try {
+          // 1. Initialize SQLite Database & Tables (rooms, bookings)
+          const sqliteOk = await initSQLiteDatabase();
+          if (sqliteOk) {
+            set({ isDatabaseReady: true });
+
+            // Load rooms from SQLite DB
+            const dbRooms = await fetchRoomsFromSQLite();
+            if (dbRooms && dbRooms.length > 0) {
+              set({ rooms: dbRooms });
+            }
+
+            // Load bookings from SQLite DB
+            const dbBookings = await fetchBookingsFromSQLite();
+            if (dbBookings && dbBookings.length > 0) {
+              set({ reservations: dbBookings });
+            }
+          }
+
+          // 2. Initialize Cloud Database (Supabase) if configured
+          if (isSupabaseConfigured) {
+            await get().initSupabaseSync();
+          }
+        } catch (error) {
+          console.warn('Database initialization error:', error);
+        }
+      },
+
+      initSupabaseSync: async () => {
+        if (!isSupabaseConfigured) return;
+
+        try {
+          // 1. Fetch live data from Supabase
+          const remoteRooms = await fetchRemoteRooms();
+          if (remoteRooms && remoteRooms.length > 0) {
+            set({ rooms: remoteRooms });
+          }
+
+          const remoteBookings = await fetchRemoteBookings();
+          if (remoteBookings) {
+            set({ reservations: remoteBookings });
+          }
+
+          // 2. Subscribe to Supabase Realtime changes on bookings
+          supabase
+            .channel('vku-realtime-bookings')
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'bookings' },
+              (payload) => {
+                const { eventType, new: newRow, old: oldRow } = payload as any;
+                set((state) => {
+                  if (eventType === 'INSERT' && newRow) {
+                    const mapped: Booking = {
+                      id: newRow.id,
+                      roomId: newRow.room_id,
+                      roomName: newRow.room_name,
+                      building: newRow.building,
+                      roomNumber: newRow.room_number,
+                      date: newRow.date,
+                      slotId: newRow.slot_id,
+                      slotLabel: newRow.slot_label,
+                      userId: newRow.user_id,
+                      userName: newRow.user_name,
+                      studentCode: newRow.student_code,
+                      purpose: newRow.purpose,
+                      status: newRow.status,
+                      createdAt: newRow.created_at,
+                      qrValue: newRow.qr_value,
+                      notificationId: newRow.notification_id,
+                    };
+                    const exists = state.reservations.some((b) => b.id === mapped.id);
+                    if (exists) return state;
+                    // Also mirror to SQLite
+                    insertBookingToSQLite(mapped).catch(() => {});
+                    return { reservations: [mapped, ...state.reservations] };
+                  }
+
+                  if (eventType === 'UPDATE' && newRow) {
+                    updateBookingStatusInSQLite(newRow.id, newRow.status).catch(() => {});
+                    return {
+                      reservations: state.reservations.map((b) =>
+                        b.id === newRow.id
+                          ? {
+                              ...b,
+                              status: newRow.status,
+                              purpose: newRow.purpose || b.purpose,
+                            }
+                          : b
+                      ),
+                    };
+                  }
+
+                  if (eventType === 'DELETE' && oldRow) {
+                    return {
+                      reservations: state.reservations.filter((b) => b.id !== oldRow.id),
+                    };
+                  }
+
+                  return state;
+                });
+              }
+            )
+            .subscribe();
+
+          set({ isCloudConnected: true });
+        } catch (error) {
+          console.warn('Supabase sync init error:', error);
+        }
+      },
 
       isSlotBooked: (roomId: string, date: string, slotId: SlotId): boolean => {
         const { reservations } = get();
@@ -156,10 +293,20 @@ export const useBookingStore = create<BookingState>()(
           }
         }
 
-        // 4. Save to store
+        // 4. Update memory & AsyncStorage
         set({
           reservations: [newBooking, ...reservations],
         });
+
+        // 5. Persist to Local Relational SQLite Database (vku_booking.db)
+        insertBookingToSQLite(newBooking).catch((err) =>
+          console.warn('SQLite insert booking error:', err)
+        );
+
+        // 6. Background sync to Cloud Database (Supabase) if configured
+        insertRemoteBooking(newBooking).catch((err) =>
+          console.warn('Supabase remote insert error:', err)
+        );
 
         return { success: true, booking: newBooking };
       },
@@ -182,6 +329,17 @@ export const useBookingStore = create<BookingState>()(
         );
 
         set({ reservations: updatedReservations });
+
+        // Persist to Local Relational SQLite Database (vku_booking.db)
+        updateBookingStatusInSQLite(bookingId, 'CANCELLED').catch((err) =>
+          console.warn('SQLite update booking error:', err)
+        );
+
+        // Background sync to Cloud Database (Supabase) if configured
+        updateRemoteBookingStatus(bookingId, 'CANCELLED').catch((err) =>
+          console.warn('Supabase remote cancel error:', err)
+        );
+
         return { success: true, message: 'Đã hủy lịch đặt phòng thành công! Khung giờ đã được giải phóng.' };
       },
 
@@ -191,6 +349,16 @@ export const useBookingStore = create<BookingState>()(
           b.id === bookingId ? { ...b, status: 'CHECKED_IN' as const } : b
         );
         set({ reservations: updatedReservations });
+
+        // Persist to Local Relational SQLite Database (vku_booking.db)
+        updateBookingStatusInSQLite(bookingId, 'CHECKED_IN').catch((err) =>
+          console.warn('SQLite check-in error:', err)
+        );
+
+        // Background sync to Cloud Database (Supabase) if configured
+        updateRemoteBookingStatus(bookingId, 'CHECKED_IN').catch((err) =>
+          console.warn('Supabase remote check-in error:', err)
+        );
       },
 
       resetToDefaults: () => {

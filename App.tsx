@@ -7,13 +7,17 @@ import { useBookingStore } from './src/store/useBookingStore';
 
 export default function App() {
   const user = useBookingStore((state) => state.user);
+  const initDatabaseSync = useBookingStore((state) => state.initDatabaseSync);
 
   useEffect(() => {
-    // Gracefully ask for notification permissions on app start if enabled
+    // 1. Gracefully ask for notification permissions on app start if enabled
     if (user.notificationEnabled) {
       requestNotificationPermission();
     }
-  }, [user.notificationEnabled]);
+
+    // 2. Initialize SQLite Relational Database (vku_booking.db) & Supabase Cloud Sync
+    initDatabaseSync();
+  }, [user.notificationEnabled, initDatabaseSync]);
 
   return (
     <SafeAreaProvider>

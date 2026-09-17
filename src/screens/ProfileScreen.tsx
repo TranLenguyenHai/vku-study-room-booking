@@ -19,7 +19,7 @@ import { COLORS, RADIUS, SPACING } from '../constants/theme';
 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const { user, reservations, toggleNotificationSetting, resetToDefaults } = useBookingStore();
+  const { user, reservations, toggleNotificationSetting, resetToDefaults, isDatabaseReady, isCloudConnected } = useBookingStore();
 
   const activeCount = reservations.filter((b) => b.status === 'CONFIRMED').length;
   const checkedInCount = reservations.filter((b) => b.status === 'CHECKED_IN').length;
@@ -93,6 +93,47 @@ export const ProfileScreen: React.FC = () => {
           <View style={styles.statBox}>
             <Text style={[styles.statNumber, { color: COLORS.accentOrange }]}>{checkedInCount}</Text>
             <Text style={styles.statLabel}>Đã check-in</Text>
+          </View>
+        </View>
+
+        {/* Database Engine Status Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeading}>Cơ sở dữ liệu (Database Engine)</Text>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <Ionicons name="server-outline" size={22} color={COLORS.primary} />
+              <View>
+                <Text style={styles.settingTitle}>Local SQLite Database</Text>
+                <Text style={styles.settingDesc}>
+                  File: vku_booking.db ({isDatabaseReady ? 'Đã kết nối • Bảng rooms & bookings' : 'Đang khởi tạo...'})
+                </Text>
+              </View>
+            </View>
+            <View style={styles.statusBadgeGreen}>
+              <Text style={styles.statusBadgeText}>{isDatabaseReady ? 'ACTIVE' : 'READY'}</Text>
+            </View>
+          </View>
+
+          <View style={[styles.settingRow, { borderTopWidth: 1, borderTopColor: COLORS.borderLight, paddingTop: 10 }]}>
+            <View style={styles.settingLeft}>
+              <Ionicons
+                name="cloud-done-outline"
+                size={22}
+                color={isCloudConnected ? COLORS.available : COLORS.accentOrange}
+              />
+              <View>
+                <Text style={styles.settingTitle}>Supabase Cloud Database</Text>
+                <Text style={styles.settingDesc}>
+                  {isCloudConnected
+                    ? 'Đã đồng bộ Realtime PostgreSQL'
+                    : 'Chế độ Cục bộ (Sẵn sàng kết nối qua .env)'}
+                </Text>
+              </View>
+            </View>
+            <View style={[styles.statusBadgeGreen, !isCloudConnected && styles.statusBadgeOrange]}>
+              <Text style={styles.statusBadgeText}>{isCloudConnected ? 'ONLINE' : 'LOCAL'}</Text>
+            </View>
           </View>
         </View>
 
@@ -320,5 +361,23 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     textAlign: 'center',
     marginTop: 4,
+  },
+  statusBadgeGreen: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  statusBadgeOrange: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FDE68A',
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    letterSpacing: 0.5,
   },
 });
