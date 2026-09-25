@@ -29,12 +29,14 @@ Dự án thuộc **Mini-Project 2** (Trọng số 10% - Tuần 5 & 6).
   - `13:00 – 15:00` (Ca Chiều 1)
   - `15:00 – 17:00` (Ca Chiều 2)
 - **Visual Conflict Engine (Chống trùng lịch thời gian thực)**:
-  - Tự động quét kiểm tra các lượt đặt chỗ đang hiệu lực trong store.
+  - Tự động quét kiểm tra các lượt đặt chỗ đang hiệu lực trong database/store.
   - Khung giờ đã có người đặt sẽ bị **vô hiệu hóa (disabled)**, chuyển sang màu xám kèm biểu tượng ổ khóa và thông tin người đã giữ chỗ.
   - Ngăn chặn triệt để tình trạng đặt trùng phòng (Double Booking).
+- **Ẩn ca học đã qua giờ thực tế hôm nay**:
+  - Tự động so sánh thời gian thực của thiết bị; nếu chọn "Hôm nay", các ca sáng đã qua giờ sẽ tự động ẩn đi để tránh đặt phòng phi lý.
 - **Thẻ Booking Pass & Mã QR Check-in tương tác**:
   - Sau khi đặt thành công, hệ thống tự động sinh mã vé duy nhất dạng `VKU-BK-XXXXX`.
-  - Hiển thị vé điện tử kèm mã QR động (`react-native-qrcode-svg`).
+  - Hiển thị vé điện tử kèm mã QR động chuẩn Vector SVG (`react-native-qrcode-svg`).
   - Hỗ trợ nút **"Mô phỏng Quét Check-in"** chuyển trạng thái sang `CHECKED_IN` ngay trên giao diện.
 
 ### 3. 🗄️ Kiến Trúc Database Kép (Local SQLite & Supabase Cloud PostgreSQL)
@@ -46,9 +48,9 @@ Dự án thuộc **Mini-Project 2** (Trọng số 10% - Tuần 5 & 6).
   - Hoạt động 100% offline bền vững, không yêu cầu tài khoản đám mây ngoài.
 - **Supabase Cloud Database & Realtime WebSocket (`@supabase/supabase-js`)**:
   - Tích hợp sẵn cơ sở dữ liệu đám mây Supabase PostgreSQL kèm file [`supabase-schema.sql`](./supabase-schema.sql).
-  - Khi cấu hình `.env`, hệ thống tự động kích hoạt kênh Realtime WebSocket: khi sinh viên A giữ chỗ, điện thoại của sinh viên B lập tức khóa slot mà không cần reload!
+  - Kích hoạt publication `supabase_realtime`: khi sinh viên A giữ chỗ, điện thoại của sinh viên B lập tức khóa slot mà không cần reload!
 - **State Management kết hợp (`useBookingStore`)**:
-  - Kết hợp Zustand + AsyncStorage + SQLite + Supabase tạo thành kiến trúc lưu trữ 4 lớp (In-memory reactive -> Local Persistent -> SQLite Relational DB -> Cloud Realtime DB).
+  - Kết hợp Zustand + AsyncStorage + SQLite + Supabase tạo thành kiến trúc lưu trữ 4 lớp (*In-memory reactive -> Local Persistent -> SQLite Relational DB -> Cloud Realtime DB*).
   - Hủy lịch phòng tức thì, giải phóng ngay khung giờ trong Conflict Engine và đồng bộ xuống SQLite + Cloud.
 
 ### 4. 🔔 Local Notifications (`expo-notifications`)
@@ -63,10 +65,12 @@ Dự án thuộc **Mini-Project 2** (Trọng số 10% - Tuần 5 & 6).
 
 ```
 vku-study-room-booking/
-├── App.tsx                          # Root App wrapper (SafeAreaProvider, Notification init)
+├── App.tsx                          # Root App wrapper (SafeAreaProvider, Database & Notification init)
 ├── app.json                         # Expo configuration
 ├── package.json                     # Dependencies & scripts
 ├── tsconfig.json                    # Cấu hình TypeScript nghiêm ngặt
+├── supabase-schema.sql              # PostgreSQL DDL Schema, RLS policies, Realtime & Seed data
+├── .env.example                     # Mẫu cấu hình Supabase Cloud URL & API Key
 ├── README.md                        # Tài liệu hướng dẫn dự án (Deliverable #2)
 ├── REPORT.md                        # Báo cáo kỹ thuật 2-4 trang (Deliverable #3)
 ├── report-preview.html              # Mẫu in PDF báo cáo chuẩn A4
@@ -81,9 +85,11 @@ vku-study-room-booking/
     ├── constants/
     │   └── theme.ts                 # Design Tokens (COLORS, SPACING, RADIUS)
     ├── store/
-    │   ├── useBookingStore.ts       # Zustand Store + AsyncStorage persist middleware
+    │   ├── useBookingStore.ts       # Zustand Store + SQLite & Supabase Sync + Conflict Engine
     │   └── useFilterStore.ts        # Zustand Store quản lý Multi-Parameter filters
     ├── services/
+    │   ├── sqliteDatabase.ts        # Local SQLite Service (expo-sqlite, vku_booking.db)
+    │   ├── supabase.ts              # Supabase Cloud Client & Realtime WebSocket replication
     │   └── notificationService.ts   # Cấu hình expo-notifications (15m reminder & instant test)
     ├── components/
     │   ├── RoomCard.tsx             # Memoized component (React.memo) tối ưu 60fps
@@ -96,7 +102,7 @@ vku-study-room-booking/
     │   ├── ExploreScreen.tsx        # Màn hình Khám phá & danh sách phòng học VKU
     │   ├── RoomDetailScreen.tsx     # Màn hình Chi tiết phòng học & Đặt lịch
     │   ├── MyBookingsScreen.tsx     # Quản lý Lịch đặt của tôi, Hủy lịch & Mở QR Pass
-    │   └── ProfileScreen.tsx        # Hồ sơ sinh viên VKU, Thống kê & Cài đặt thông báo
+    │   └── ProfileScreen.tsx        # Hồ sơ sinh viên VKU, Thống kê & Trạng thái Database Engine
     └── navigation/
         └── AppNavigator.tsx         # Bottom Tabs & Native Stack Navigator
 ```
@@ -118,11 +124,27 @@ npm install
 
 ### 2. Chạy ứng dụng trên Thiết bị Di động (Expo Go)
 ```bash
+# Cách 1: Chạy mạng nội bộ hoặc Hotspot từ điện thoại:
 npx expo start
-```
-- Mở camera hoặc app **Expo Go** quét mã QR hiển thị trong terminal để trải nghiệm trên máy thật.
 
-### 3. Chạy ứng dụng trên Trình duyệt Web
+# Cách 2 (Khuyên dùng khi bắt Wi-Fi gia đình):
+npx expo start --tunnel
+```
+- Mở camera hoặc app **Expo Go** quét mã QR hiển thị trong terminal để trải nghiệm trực tiếp trên iPhone / Android.
+
+### 3. Cấu hình Supabase Cloud Database (Đồng bộ Realtime đám mây)
+Ứng dụng được thiết kế theo kiến trúc **Dual Database**: Mặc định chạy sẵn **Local SQLite Database (`vku_booking.db`)** hoàn toàn tự động trên thiết bị. Để kích hoạt thêm tính năng đồng bộ đám mây Supabase PostgreSQL:
+1. Đăng ký/Đăng nhập tại [https://supabase.com](https://supabase.com) và tạo một Project mới (chọn Region `Singapore`).
+2. Vào mục **SQL Editor** trên Supabase Dashboard, copy toàn bộ nội dung file [`supabase-schema.sql`](./supabase-schema.sql) và bấm **Run**.
+3. Vào **Project Settings** -> **API**, copy `Project URL` và `anon key`.
+4. Điền 2 thông số vào file `.env` ở thư mục gốc:
+   ```env
+   EXPO_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-api-key
+   ```
+5. Khởi động lại ứng dụng, hệ thống sẽ tự động đồng bộ Realtime hai chiều giữa các máy!
+
+### 4. Chạy ứng dụng trên Trình duyệt Web
 ```bash
 npm run web
 # hoặc
@@ -130,7 +152,7 @@ npx expo start --web
 ```
 Ứng dụng sẽ tự động mở tại địa chỉ `http://localhost:8081`.
 
-### 4. Build phiên bản Web Production (Live Demo)
+### 5. Build phiên bản Web Production (Live Demo)
 ```bash
 npx expo export -p web
 ```
@@ -141,7 +163,7 @@ Toàn bộ file build tĩnh nằm trong thư mục `dist/`, có thể deploy tr�
 ## 🧪 Kịch Bản Kiểm Thử Đánh Giá (Demo Checklist)
 
 | STT | Kịch bản kiểm thử | Hành động | Kết quả mong đợi |
-|-----|-------------------|-----------|-------------------|
+|:---:|-------------------|-----------|-------------------|
 | 1 | **Tối ưu 60fps FlatList** | Cuộn lướt danh sách phòng trên màn hình Khám Phá | Danh sách hiển thị mượt mà, ảnh load chuẩn, không bị giật lag. |
 | 2 | **Lọc đa thông số** | Chọn Tòa B + Sức chứa "2-6 bạn" + "Điều hòa" | Danh sách lọc phản hồi tức thì dưới 16ms, hiển thị chính xác phòng thỏa mãn. |
 | 3 | **Conflict Engine** | Vào phòng A.101 chọn Hôm nay ca 07:30–09:30 | Slot bị khóa (disabled), gạch ngang, hiển thị "Đã kín" do đã có người đặt trước. |
@@ -150,6 +172,7 @@ Toàn bộ file build tĩnh nằm trong thư mục `dist/`, có thể deploy tr�
 | 6 | **Bắn thông báo cục bộ** | Bấm "Thử Bắn Thông Báo Nhắc Lịch" trên vé hoặc tab Lịch Đặt | Bắn ngay banner thông báo nhắc nhở 15 phút trước giờ nhận phòng. |
 | 7 | **Hủy phòng & Nhả Slot** | Vào tab "Lịch Đặt", chọn 1 phòng đang đặt và bấm nút Hủy | Lịch đặt chuyển sang Lịch Sử / Đã Hủy, khung giờ tương ứng được mở khóa lại ngay lập tức. |
 | 8 | **Lưu trữ Bền vững** | Reload lại app hoặc tải lại trang web | Toàn bộ dữ liệu đặt phòng và trạng thái check-in vẫn được giữ nguyên qua `AsyncStorage`. |
+| 9 | **Cơ sở dữ liệu (SQLite & Supabase)** | Xem mục "Cơ sở dữ liệu" trong tab Hồ Sơ | Hiển thị `vku_booking.db` [ACTIVE], tự động lưu dữ liệu quan hệ và sẵn sàng đồng bộ Supabase Cloud. |
 
 ---
 
